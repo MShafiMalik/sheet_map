@@ -11,63 +11,58 @@
       height: 100%;
       margin: 0;
     }
-    #map {
-      height: 100%;
-      width: 100%;
-    }
-
     table tr td:first-child {
       white-space: nowrap;
     }
-
     ::-webkit-scrollbar {
-      width: 6px;
+      width: 10px;
     }
-
-    /* Track */
     ::-webkit-scrollbar-track {
       box-shadow: inset 0 0 5px grey; 
       border-radius: 10px;
     }
-     
-    /* Handle */
     ::-webkit-scrollbar-thumb {
       background: #888; 
       border-radius: 10px;
     }
-
-    /* Handle on hover */
     ::-webkit-scrollbar-thumb:hover {
       background: #555; 
     }
-
-    .cat_bar {
-      display: none;
+    .contain {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    #map {
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 75%;
+      height: 100%;
+    }
+    #filter_contain {
+      overflow: auto;
       position: fixed;
       left: 0;
       top: 0;
-      background-color: #fff;
-      z-index: 999;
-      width: 100%;
-      overflow-x: auto;
+      width: 25%;
+      height: 100%;
       margin: 0;
-      padding: 10px 0;
+      background-color: #fff;
+      padding: 20px;
+      list-style-type: none;
       box-shadow: 0 6px 15px rgba(0, 0, 0, .2);
     }
-    .cat_bar ul {
-      display: flex;
-      list-style-type: none;
-      padding: 8px;
-      margin: 0;
-    }
-    .cat_bar li a {
+    #filter_contain li a {
       color: grey;
       text-decoration: none;
       border: 1px solid grey;
-      margin: 0 5px;
       padding: 8px 16px;
       font-size: 15px;
+      display: block;
+      margin-bottom: 10px;
       border-radius: 10px;
+      text-align: center;
     }
     .cat_active {
       background-color: #ccffdd;
@@ -80,13 +75,17 @@
 </head>
 <body>
 
-  <nav class="cat_bar" id="cat_bar">
+  <div class="contain">
+    
     <ul id="filter_contain">
       <li><a href="javascript:void(0)" class="cat_active" id="all_cats" onclick="show_all(this)">All</a></li>
     </ul>
-  </nav>
 
   <div id="map"></div>
+
+  </div>
+
+    
   
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBJYygnGAhAWiwnrDSjFwGo3Bo5Re98lR4"></script>
 
@@ -147,7 +146,6 @@
     }
     if (categories) {
       document.getElementById("filter_contain").innerHTML += categories;
-      document.getElementById("cat_bar").style.display = 'block';
     }
 
   });
@@ -192,16 +190,7 @@
     var options = {
       zoom: 15,
       center: center_latlng,
-      mapTypeId: google.maps.MapTypeId.ROADMAP,
-      mapTypeControl: true,
-      mapTypeControlOptions: {
-        style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-        position: google.maps.ControlPosition.LEFT_BOTTOM,
-      },
-      fullscreenControl: true,
-      fullscreenControlOptions: {
-        position: google.maps.ControlPosition.RIGHT_CENTER,
-      }
+      mapTypeId: google.maps.MapTypeId.ROADMAP
     }
     map = new google.maps.Map(document.getElementById("map"), options);
 
