@@ -1,0 +1,280 @@
+<html>
+<head>
+  <title>Basic Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+
+    table tr td:first-child {
+      white-space: nowrap;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    /* Track */
+    ::-webkit-scrollbar-track {
+      box-shadow: inset 0 0 5px grey; 
+      border-radius: 10px;
+    }
+     
+    /* Handle */
+    ::-webkit-scrollbar-thumb {
+      background: #888; 
+      border-radius: 10px;
+    }
+
+    /* Handle on hover */
+    ::-webkit-scrollbar-thumb:hover {
+      background: #555; 
+    }
+
+    .cat_bar {
+      display: none;
+      position: fixed;
+      left: 0;
+      top: 0;
+      background-color: #fff;
+      z-index: 999;
+      width: 100%;
+      overflow-x: auto;
+      margin: 0;
+      padding: 10px 0;
+      box-shadow: 0 6px 15px rgba(0, 0, 0, .2);
+    }
+    .cat_bar ul {
+      display: flex;
+      list-style-type: none;
+      padding: 8px;
+      margin: 0;
+    }
+    .cat_bar li a {
+      color: grey;
+      text-decoration: none;
+      border: 1px solid grey;
+      margin: 0 5px;
+      padding: 8px 16px;
+      font-size: 15px;
+      border-radius: 10px;
+    }
+    .cat_active {
+      background-color: #ccffdd;
+      color: #009933 !important;
+      border-color: #009933 !important;
+    }
+
+  </style>
+
+</head>
+<body>
+
+  <nav class="cat_bar" id="cat_bar">
+    <ul id="filter_contain">
+      <li><a href="javascript:void(0)" class="cat_active" id="all_cats" onclick="show_all(this)">All</a></li>
+    </ul>
+  </nav>
+
+  <div id="map"></div>
+  
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBJYygnGAhAWiwnrDSjFwGo3Bo5Re98lR4"></script>
+
+<script>
+  
+  var map, infoWindow, markers = [];
+  var filter_cats = [];
+  var data = [];
+  const all_cats = [];
+
+  const spreadsheetId = '1qHTVCiVOh5jW0LOkpD1q2YRC7pcTeJzqH75DYvilvsc';
+   
+  fetch(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json`)
+  .then(res => res.text())
+  .then(text => {
+    const sheet_data = JSON.parse(text.substr(47).slice(0, -2));
+
+    const cols = sheet_data.table.cols;
+    const rows = sheet_data.table.rows;
+
+    for(let i = 0; i < rows.length; i++) {
+        
+      if(rows[i].c[5] != null && rows[i].c[6] != null) {
+      
+        data.push({
+            name : rows[i].c[0].v,
+            known_for : rows[i].c[1].v,
+            category : rows[i].c[2].v,
+            lived : rows[i].c[3].v,
+            address : rows[i].c[4].v,
+            lat : rows[i].c[5].v,
+            long : rows[i].c[6].v,
+            wikipedia_url : rows[i].c[7].v,
+            bio : rows[i].c[8].v
+          });
+          var flag = false;
+          for(let j = 0; j < all_cats.length; j++) {
+            if (all_cats[j] == rows[i].c[2].v) {
+              flag = true;
+            }
+          }
+          if (flag == true) {
+            continue;
+          } else {
+            all_cats.push(rows[i].c[2].v);
+          }
+          
+      }
+      
+    }
+
+    load_map(all_cats);
+
+    var categories = '';
+
+    for(let i = 0; i < all_cats.length; i++) {
+      categories += `<li><a href="javascript:void(0)" class="cat_item" onclick="update_filter(this, '${all_cats[i]}')">${all_cats[i]}</a></li>`;
+    }
+    if (categories) {
+      document.getElementById("filter_contain").innerHTML += categories;
+      document.getElementById("cat_bar").style.display = 'block';
+    }
+
+  });
+
+  function update_filter(ele, cat) {
+
+    document.getElementById('all_cats').classList.remove("cat_active");
+
+    if (ele.classList.contains('cat_active') == false) {
+      ele.classList.add("cat_active");
+      filter_cats.push(cat);
+      load_map(filter_cats);
+    } else {
+      ele.classList.remove("cat_active");
+      const index = filter_cats.indexOf(cat);
+      if (index > -1) {
+        filter_cats.splice(index, 1);
+      }
+      load_map(filter_cats);
+    }
+  }
+
+  function show_all(ele) {
+    var cat_item = document.querySelectorAll(".cat_item");
+    for(var i = 0; i < cat_item.length; i++) {
+      cat_item[i].classList.remove("cat_active");
+    }
+    filter_cats = [];
+    if (ele.classList.contains('cat_active') == false) {
+      ele.classList.add("cat_active");
+      load_map(all_cats);
+    } else {
+      ele.classList.remove("cat_active");
+      load_map([]);
+    }
+  }
+
+
+  function load_map(cats){
+
+    var center_latlng = new google.maps.LatLng(data[0].lat, data[0].long);
+    var options = {
+      zoom: 15,
+      center: center_latlng,
+      mapTypeId: google.maps.MapTypeId.ROADMAP,
+      mapTypeControl: true,
+      mapTypeControlOptions: {
+        style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+        position: google.maps.ControlPosition.LEFT_BOTTOM,
+      },
+      fullscreenControl: true,
+      fullscreenControlOptions: {
+        position: google.maps.ControlPosition.RIGHT_CENTER,
+      }
+    }
+    map = new google.maps.Map(document.getElementById("map"), options);
+
+    infoWindow = new google.maps.InfoWindow();
+    var bounds = new google.maps.LatLngBounds();
+
+    clear_markers();
+
+    for (let i = 0; i < data.length; i++) {
+
+      var flag = false;
+      for(let j = 0; j < cats.length; j++) {
+        if (cats[j] == data[i].category) {
+          flag = true;
+        }
+      }
+
+      if (flag == true) {
+
+        var point = new google.maps.LatLng(parseFloat(data[i].lat), parseFloat(data[i].long));
+
+        const marker_icon = {
+          url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png',
+          size: new google.maps.Size(30, 30),
+          origin: new google.maps.Point(0, 0),
+          anchor: new google.maps.Point(30, 30),
+          scaledSize: new google.maps.Size(30, 30)
+        };
+        
+        var marker = new google.maps.Marker({
+          position:  point,
+          icon: marker_icon
+        });
+        marker.setMap(map);
+        markers.push(marker);
+        bounds.extend(point);
+
+        info_content = `<table>
+                        <tr><td><b>Name:</b></td><td>${data[i].name}</td></tr>
+                        <tr><td><b>Known For:</b></td><td>${data[i].known_for}</td></tr>
+                        <tr><td><b>Category:</b></td><td>${data[i].category}</td></tr>
+                        <tr><td><b>Lived:</b></td><td>${data[i].lived}</td></tr>
+                        <tr><td><b>Address:</b></td><td>${data[i].address}</td></tr>
+                        <tr>
+                          <td><b>Wikipedia URL:</b></td>
+                          <td><a href="${data[i].wikipedia_url}" target="_blank">${data[i].wikipedia_url}</a></td>
+                        </tr>
+                        <tr><td><b>Bio:</b></td><td>${data[i].bio}</td></tr>
+                      </table>`;
+
+        (function(selectedMarker, info_content) {
+          google.maps.event.addListener(selectedMarker, 'click', function() {
+            infoWindow.setContent(info_content); 
+            infoWindow.open(map, selectedMarker);
+          });
+        })(marker, info_content);
+
+      }
+      
+    }
+
+    map.fitBounds(bounds);
+
+  }
+
+  function clear_markers() {
+    for(let i = 0; i < markers.length; i++) {
+      markers[i].setMap(null);
+    }
+    markers = [];
+  }
+
+</script>
+
+</body> 
+</html>
